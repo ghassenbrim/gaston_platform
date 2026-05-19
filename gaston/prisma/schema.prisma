@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Contract {
+  id        String   @id @default(cuid())
+  userId    String
+  url       String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Employee {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  firstName    String
+  lastName     String
+  position     String?
+  iban         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id])
+  Missions     Mission[]
+  Payments     Payment[]
+  WorkDays     WorkDay[]
+  Reservations Reservation[] @relation("EmployeeToReservation")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  targetId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id         String    @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String    @default("")
+  createdAt  DateTime  @default(now())
+  fileName   String?
+  mediaType  String?
+  mediaUrl   String?
+  isDeleted  Boolean   @default(false)
+  isPinned   Boolean   @default(false)
+  reaction   String?
+  isRead     Boolean   @default(false)
+  replyToId  String?
+  receiver   User      @relation("Message_receiverIdToUser", fields: [receiverId], references: [id])
+  replyTo    Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies    Message[] @relation("MessageReplies")
+  sender     User      @relation("Message_senderIdToUser", fields: [senderId], references: [id])
+}
+
+model Mission {
+  id         String    @id @default(cuid())
+  employeeId String?
+  title      String
+  date       DateTime
+  time       String
+  location   String
+  color      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Employee   Employee? @relation(fields: [employeeId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  refId     String?
+  type      String   @default("system")
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  employeeId String
+  amount     Float
+  status     PaymentStatus @default(PENDING)
+  reference  String?
+  date       DateTime      @default(now())
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  Employee   Employee      @relation(fields: [employeeId], references: [id])
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  userId      String
+  url         String
+  category    String?
+  mediaType   String   @default("image")
+  aspectRatio String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  clientName  String
+  clientEmail String
+  service     String
+  date        DateTime
+  time        String
+  location    String
+  latitude    Float?
+  longitude   Float?
+  status      ReservationStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  Employees   Employee[]        @relation("EmployeeToReservation")
+}
+
+model User {
+  id                               String         @id @default(cuid())
+  email                            String         @unique
+  name                             String?
+  createdAt                        DateTime       @default(now())
+  updatedAt                        DateTime       @updatedAt
+  password                         String?
+  role                             Role           @default(USER)
+  age                              Int?
+  gender                           String?
+  phone                            String?
+  avatar                           String?
+  Contract                         Contract[]
+  Employee                         Employee?
+  Favorite                         Favorite[]
+  Message_Message_receiverIdToUser Message[]      @relation("Message_receiverIdToUser")
+  Message_Message_senderIdToUser   Message[]      @relation("Message_senderIdToUser")
+  Notification                     Notification[]
+  Photo                            Photo[]
+  Review                           Review[]
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, code])
+}
+
+model PhoneVerificationCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([phone, code])
+}
+
+model WorkDay {
+  id          String     @id @default(cuid())
+  employeeId  String
+  date        DateTime
+  hours       Float
+  description String?
+  status      WorkStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  Employee    Employee   @relation(fields: [employeeId], references: [id])
+}
+
+model HomepageContent {
+  id        String   @id @default("singleton")
+  portfolio Json     @default("[]")
+  services  Json     @default("[]")
+  about     Json     @default("{}")
+  contact   Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model QuoteConfigContent {
+  id        String   @id @default("singleton")
+  config    Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  quote      String   @db.Text
+  rating     Int      @default(5)
+  eventRole  String?  // Ex: "Mariage", "Immobilier"
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+  USER
+}
+
+enum WorkStatus {
+  PENDING
+  APPROVED
+  PAID
+}
