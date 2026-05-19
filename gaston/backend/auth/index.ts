@@ -53,7 +53,7 @@ export const sendVerificationCode = async (email: string) => {
 
         // Si l'envoi échoue, retourner une erreur explicite
         if (!emailResult.success) {
-            return { success: false, error: "Erreur lors de l'envoi de l'email." };
+            return { success: false, error: `Erreur lors de l'envoi de l'email: ${emailResult.error}` };
         }
 
         return { success: true };

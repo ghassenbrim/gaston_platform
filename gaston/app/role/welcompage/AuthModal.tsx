@@ -81,7 +81,10 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                 setIsEmailSent(false);
                 setError(result.error || "Erreur lors de l'envoi du code.");
             }
-        } catch { setError("Erreur serveur."); }
+        } catch (error) {
+            console.error("Erreur envoi code email:", error);
+            setError(error instanceof Error ? error.message : "Erreur serveur.");
+        }
         finally {
             setIsSending(false);
         }

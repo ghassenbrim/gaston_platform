@@ -33,10 +33,13 @@ SMTP_SECURE=false
 SMTP_USER=your-email@example.com
 SMTP_PASS=your-smtp-app-password
 SMTP_FROM="Gaston Platform <your-email@example.com>"
+SMTP_TIMEOUT=10000
 BREVO_API_KEY=your-brevo-api-key
 BREVO_SMS_SENDER=Gaston
 CLEANUP_SECRET=generate-a-long-random-secret
 ```
+
+When `BREVO_API_KEY` is set, verification emails are sent through Brevo's HTTP transactional email API instead of opening a direct SMTP connection. Keep `SMTP_FROM` or `SMTP_USER` set to a sender address verified in Brevo.
 
 ## Persistent uploads
 
