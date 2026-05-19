@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Next.js Dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd gaston && npm run dev"],
+      "port": 3000,
+      "autoPort": false
+    }
+  ]
+}
