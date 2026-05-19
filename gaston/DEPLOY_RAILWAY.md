@@ -8,6 +8,7 @@
 4. Railway will use `railway.json`:
    - Build command: `npm run build`
    - Start command: `npm run start`
+   - Runtime: Node.js 20 via `nixpacks.toml`
 
 ## Database
 

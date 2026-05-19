@@ -2,6 +2,10 @@
   "name": "gaston",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "PATH=\"/usr/local/bin:$PATH\" next dev",
     "build": "prisma generate && next build",
