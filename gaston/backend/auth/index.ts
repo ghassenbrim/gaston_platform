@@ -22,6 +22,7 @@ function generateCode(): string {
  */
 export const sendVerificationCode = async (email: string) => {
     try {
+        const normalizedEmail = email.trim().toLowerCase();
         // Génération du code à 6 chiffres
         const code = generateCode();
         // Date d'expiration : maintenant + 10 minutes
@@ -29,13 +30,13 @@ export const sendVerificationCode = async (email: string) => {
 
         // Supprimer les anciens codes pour cet email afin d'éviter les doublons
         await prisma.verificationCode.deleteMany({
-            where: { email }
+            where: { email: normalizedEmail }
         });
 
         // Créer le nouveau code de vérification en base de données
         await prisma.verificationCode.create({
             data: {
-                email,
+                email: normalizedEmail,
                 code,
                 expiresAt
             }
@@ -44,11 +45,11 @@ export const sendVerificationCode = async (email: string) => {
         // Log du code en développement pour tester sans SMTP
         // (permet de récupérer le code sans avoir besoin d'un serveur mail réel)
         if (process.env.NODE_ENV === "development") {
-            console.log(`\n📧 [DEV] Code de vérification pour ${email}: ${code}\n`);
+            console.log(`\n[DEV] Code de verification pour ${normalizedEmail}: ${code}\n`);
         }
 
         // Envoyer l'email contenant le code de vérification
-        const emailResult = await sendVerificationEmail(email, code);
+        const emailResult = await sendVerificationEmail(normalizedEmail, code);
 
         // Si l'envoi échoue, retourner une erreur explicite
         if (!emailResult.success) {
@@ -127,11 +128,12 @@ export const verifyPhoneCode = async (phone: string, code: string) => {
  */
 export const verifyCode = async (email: string, code: string) => {
     try {
+        const normalizedEmail = email.trim().toLowerCase();
         // Recherche du code de vérification correspondant au couple (email, code)
         const verification = await prisma.verificationCode.findUnique({
             where: {
                 email_code: {
-                    email,
+                    email: normalizedEmail,
                     code
                 }
             }

@@ -32,6 +32,7 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@example.com
 SMTP_PASS=your-smtp-app-password
+SMTP_FROM="Gaston Platform <your-email@example.com>"
 BREVO_API_KEY=your-brevo-api-key
 BREVO_SMS_SENDER=Gaston
 CLEANUP_SECRET=generate-a-long-random-secret

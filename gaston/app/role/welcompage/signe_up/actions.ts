@@ -16,8 +16,9 @@ import { cookies } from "next/headers";
 export async function sendVerificationAction(email: string) {
     // Validation : l'email est obligatoire
     if (!email) return { success: false, error: "L'email est requis." };
+    const normalizedEmail = email.trim().toLowerCase();
     // Délégation au backend qui génère et envoie le code
-    return await sendVerificationCode(email);
+    return await sendVerificationCode(normalizedEmail);
 }
 
 /**
@@ -32,14 +33,15 @@ export async function sendVerificationAction(email: string) {
 export async function verifyCodeAction(email: string, code: string) {
     // Validation : les deux paramètres sont obligatoires
     if (!email || !code) return { success: false, error: "L'email et le code sont requis." };
+    const normalizedEmail = email.trim().toLowerCase();
 
     // Vérification du code en base de données
-    const result = await verifyCode(email, code);
+    const result = await verifyCode(normalizedEmail, code);
 
     if (result.success) {
         // Si le code est valide, on pose un cookie "verified_email" pour mémoriser
         // que cet email a été vérifié (durée de vie : 15 minutes, strict pour la sécurité)
-        (await cookies()).set("verified_email", email, {
+        (await cookies()).set("verified_email", normalizedEmail, {
             path: "/",
             maxAge: 15 * 60,       // 15 minutes (en secondes)
             httpOnly: true,        // Non accessible en JavaScript côté client
@@ -59,7 +61,7 @@ export async function verifyCodeAction(email: string, code: string) {
  */
 export async function signUpAction(formData: FormData) {
     // Récupération de l'email soumis dans le formulaire
-    const email = formData.get("email") as string;
+    const email = ((formData.get("email") as string) || "").trim().toLowerCase();
 
     // Lecture du cookie "verified_email" posé lors de la vérification du code
     const cookieStore = await cookies();

@@ -1,5 +1,13 @@
 import nodemailer from "nodemailer";
 
+function getRequiredEnv(name: string) {
+    const value = process.env[name]?.trim();
+    if (!value) {
+        throw new Error(`Variable d'environnement manquante: ${name}`);
+    }
+    return value;
+}
+
 /**
  * Configure le transporteur d'emails via le protocole SMTP.
  * En production, utilisez des variables d'environnement pour ces valeurs.
@@ -11,15 +19,20 @@ import nodemailer from "nodemailer";
  * - SMTP_USER  : adresse email de l'expéditeur
  * - SMTP_PASS  : mot de passe ou mot de passe d'application SMTP
  */
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
+function createTransporter() {
+    const port = Number(process.env.SMTP_PORT || "587");
+
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port,
+        secure: process.env.SMTP_SECURE === "true" || port === 465,
+        requireTLS: port === 587,
+        auth: {
+            user: getRequiredEnv("SMTP_USER"),
+            pass: getRequiredEnv("SMTP_PASS"),
+        },
+    });
+}
 
 /**
  * Envoie un email de vérification avec le code donné.
@@ -29,9 +42,12 @@ const transporter = nodemailer.createTransport({
  * @returns Un objet { success: true } en cas de succès, ou { success: false, error } en cas d'échec
  */
 export async function sendVerificationEmail(email: string, code: string) {
+    const smtpUser = getRequiredEnv("SMTP_USER");
+    const transporter = createTransporter();
+
     // Définition du contenu de l'email : expéditeur, destinataire, sujet et corps HTML
     const mailOptions = {
-        from: `"Gaston Platform" <${process.env.SMTP_USER}>`,
+        from: process.env.SMTP_FROM || `"Gaston Platform" <${smtpUser}>`,
         to: email,
         subject: "Votre code de vérification Gaston Platform",
         // Corps HTML de l'email avec mise en forme visuelle du code de vérification

@@ -64,20 +64,26 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
     if (!isOpen && !isAnimating) return null;
 
     const handleSendCode = async () => {
-        if (!signupEmail || !signupEmail.includes("@")) {
+        const normalizedEmail = signupEmail.trim().toLowerCase();
+        if (!normalizedEmail || !normalizedEmail.includes("@")) {
             setError("Veuillez entrer une adresse email valide."); return;
         }
+        setSignupEmail(normalizedEmail);
         setIsSending(true); setError(null);
         try {
-            const result = await sendVerificationAction(signupEmail);
-            if (!result.success) setError(result.error || "Erreur lors de l'envoi du code.");
+            const result = await sendVerificationAction(normalizedEmail);
+            if (result.success) {
+                setIsEmailSent(true);
+                setDigits(["", "", "", "", "", ""]);
+                setCountdown(60);
+                setTimeout(() => inputRefs.current[0]?.focus(), 100);
+            } else {
+                setIsEmailSent(false);
+                setError(result.error || "Erreur lors de l'envoi du code.");
+            }
         } catch { setError("Erreur serveur."); }
         finally {
-            setIsEmailSent(true);
-            setDigits(["", "", "", "", "", ""]);
-            setCountdown(60);
             setIsSending(false);
-            setTimeout(() => inputRefs.current[0]?.focus(), 100);
         }
     };
 
@@ -101,7 +107,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
         const code = digits.join("");
         if (code.length < 6) { setError("Entrez les 6 chiffres du code."); return; }
         setIsVerifying(true); setError(null);
-        const result = await verifyCodeAction(signupEmail, code);
+        const result = await verifyCodeAction(signupEmail.trim().toLowerCase(), code);
         if (result.success) {
             setIsEmailVerified(true);
         } else {
@@ -152,10 +158,10 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
     };
 
     return (
-        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+        <div className={`fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-3 pt-4 sm:items-center sm:p-6 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md cursor-pointer" onClick={onClose} />
 
-            <div className={`w-full max-w-sm sm:max-w-xl relative bg-white/90 backdrop-blur-3xl p-5 sm:p-8 md:p-12 rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_50px_120px_-20px_rgba(0,0,0,0.3)] border border-white/40 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] overflow-y-auto max-h-[95dvh] ${isOpen ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-12 opacity-0"}`}>
+            <div className={`w-full max-w-sm sm:max-w-xl relative bg-white/90 backdrop-blur-3xl p-4 sm:p-8 md:p-12 rounded-[1.5rem] sm:rounded-[2.5rem] shadow-[0_50px_120px_-20px_rgba(0,0,0,0.3)] border border-white/40 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] overflow-y-auto max-h-[calc(100dvh-2rem)] ${isOpen ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-12 opacity-0"}`}>
 
                 <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors p-2 z-20">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +179,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                     {/* ── LOGIN ── */}
                     <div className={`transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${view === "login" ? "opacity-100 translate-x-0 relative z-10" : "opacity-0 -translate-x-12 absolute inset-0 pointer-events-none z-0"}`}>
                         <div className="text-center mb-8">
-                            <h2 className="font-serif text-5xl italic mb-3 text-slate-900 tracking-tight">Connexion</h2>
+                            <h2 className="font-serif text-4xl sm:text-5xl italic mb-3 text-slate-900 tracking-tight">Connexion</h2>
                             <p className="text-slate-500 text-[10px] font-bold tracking-[0.2em] uppercase">Espace Privé</p>
                         </div>
                         {error && <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wider rounded-xl text-center">{error}</div>}
@@ -189,7 +195,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                                 </div>
                                 <input type="password" name="password" required placeholder="••••••••" className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
                             </div>
-                            <button type="submit" disabled={isLoading} className="w-full py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] transition-all bg-slate-900 text-white hover:bg-[#bca086] shadow-xl active:scale-[0.98] flex items-center justify-center gap-3">
+                            <button type="submit" disabled={isLoading} className="w-full py-4 sm:py-5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em] sm:tracking-[0.4em] transition-all bg-slate-900 text-white hover:bg-[#bca086] shadow-xl active:scale-[0.98] flex items-center justify-center gap-3">
                                 {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Se connecter"}
                             </button>
                         </form>
@@ -204,7 +210,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                     {/* ── SIGNUP ── */}
                     <div className={`transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${view === "signup" ? "opacity-100 translate-x-0 relative z-10" : "opacity-0 translate-x-12 absolute inset-0 pointer-events-none z-0"}`}>
                         <div className="text-center mb-6">
-                            <h2 className="font-serif text-5xl italic mb-3 text-slate-900 tracking-tight">Inscription</h2>
+                            <h2 className="font-serif text-4xl sm:text-5xl italic mb-3 text-slate-900 tracking-tight">Inscription</h2>
                             <p className="text-slate-500 text-[10px] font-bold tracking-[0.2em] uppercase">Espace Membre</p>
                         </div>
                         {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wider rounded-xl text-center">{error}</div>}
@@ -215,26 +221,26 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                             {/* Nom */}
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Nom complet</label>
-                                <input type="text" name="name" required placeholder="Jean Dupont" className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
+                                <input type="text" name="name" required placeholder="Jean Dupont" className="w-full px-4 sm:px-7 py-3.5 sm:py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
                             </div>
 
                             {/* Email + OTP */}
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Email</label>
-                                <div className="flex gap-2">
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                                     <input
                                         type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
                                         disabled={isEmailVerified} required placeholder="votre@email.com"
-                                        className={`flex-1 px-5 py-4 border rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all ${isEmailVerified ? "bg-green-50 border-green-200 text-green-700" : "bg-white/50 border-slate-100"}`}
+                                        className={`min-w-0 w-full px-4 sm:px-5 py-3.5 sm:py-4 border rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all ${isEmailVerified ? "bg-green-50 border-green-200 text-green-700" : "bg-white/50 border-slate-100"}`}
                                     />
                                     {!isEmailVerified && (
                                         <button type="button" onClick={handleSendCode} disabled={isSending || countdown > 0}
-                                            className={`px-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${countdown > 0 ? "bg-slate-100 text-slate-400" : "bg-slate-900 text-white hover:bg-[#bca086]"}`}>
+                                            className={`w-full sm:w-auto px-4 py-3.5 sm:py-0 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${countdown > 0 ? "bg-slate-100 text-slate-400" : "bg-slate-900 text-white hover:bg-[#bca086]"}`}>
                                             {isSending ? "..." : countdown > 0 ? `${countdown}s` : isEmailSent ? "Renvoyer" : "Envoyer"}
                                         </button>
                                     )}
                                     {isEmailVerified && (
-                                        <div className="flex items-center px-3 text-green-500">
+                                        <div className="flex items-center justify-center px-3 py-2 text-green-500">
                                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                                             </svg>
@@ -248,7 +254,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                                         <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 text-center">
                                             {isEmailSent ? `Code envoyé à ${signupEmail}` : "Code de vérification email"}
                                         </p>
-                                        <div className="flex justify-center gap-2">
+                                        <div className="grid grid-cols-6 gap-1.5 sm:flex sm:justify-center sm:gap-2">
                                             {digits.map((digit, i) => (
                                                 <input key={i}
                                                     ref={(el) => { inputRefs.current[i] = el; }}
@@ -257,7 +263,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                                                     onChange={(e) => handleDigitChange(i, e.target.value)}
                                                     onKeyDown={(e) => handleDigitKeyDown(i, e)}
                                                     onPaste={i === 0 ? handleDigitPaste : undefined}
-                                                    className={`w-10 h-12 text-center text-lg font-bold border-2 rounded-xl outline-none transition-all
+                                                    className={`h-11 w-full min-w-0 sm:w-10 sm:h-12 text-center text-lg font-bold border-2 rounded-xl outline-none transition-all
                                                         ${!isEmailSent ? "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed" :
                                                           digit ? "border-[#bca086] bg-[#bca086]/10 text-slate-900" : "border-slate-200 bg-white text-slate-400"}
                                                         ${isEmailSent ? "focus:border-[#bca086] focus:ring-2 focus:ring-[#bca086]/10" : ""}`}
@@ -266,7 +272,7 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                                         </div>
                                         <button type="button" onClick={handleVerifyCode}
                                             disabled={!isEmailSent || isVerifying || digits.join("").length < 6}
-                                            className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] transition-all
+                                            className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] sm:tracking-[0.3em] transition-all
                                                 ${isEmailSent && digits.join("").length === 6 && !isVerifying
                                                     ? "bg-[#bca086] text-white hover:bg-slate-900 shadow-md" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
                                             {isVerifying ? (
@@ -287,18 +293,18 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Téléphone</label>
-                                    <input type="tel" name="phone" required placeholder="+216 -- --- ---" className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
+                                    <input type="tel" name="phone" required placeholder="+216 -- --- ---" className="w-full px-4 sm:px-7 py-3.5 sm:py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Âge</label>
-                                    <input type="number" name="age" required placeholder="25" className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
+                                    <input type="number" name="age" required placeholder="25" className="w-full px-4 sm:px-7 py-3.5 sm:py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
                                 </div>
                             </div>
 
                             {/* Genre */}
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Genre</label>
-                                <select name="gender" required className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none appearance-none">
+                                <select name="gender" required className="w-full px-4 sm:px-7 py-3.5 sm:py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none appearance-none">
                                     <option value="">Sélectionner</option>
                                     <option value="homme">Homme</option>
                                     <option value="femme">Femme</option>
@@ -310,17 +316,17 @@ export function AuthModal({ isOpen, initialView = "login", onClose }: AuthModalP
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Mot de passe</label>
-                                    <input type="password" name="password" required placeholder="••••••••" className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
+                                    <input type="password" name="password" required placeholder="••••••••" className="w-full px-4 sm:px-7 py-3.5 sm:py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 ml-2">Confirmer</label>
-                                    <input type="password" name="password_confirm" required placeholder="••••••••" className="w-full px-7 py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
+                                    <input type="password" name="password_confirm" required placeholder="••••••••" className="w-full px-4 sm:px-7 py-3.5 sm:py-4 bg-white/50 border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-[#bca086]/10 outline-none transition-all" />
                                 </div>
                             </div>
 
                             {/* Bouton S'inscrire */}
                             <button type="submit" disabled={isLoading || !isEmailVerified}
-                                className={`w-full py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] transition-all shadow-xl active:scale-[0.98] flex items-center justify-center gap-3
+                                className={`w-full py-4 sm:py-5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.22em] sm:tracking-[0.4em] transition-all shadow-xl active:scale-[0.98] flex items-center justify-center gap-3
                                     ${isEmailVerified && !isLoading ? "bg-slate-900 text-white hover:bg-[#bca086]" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
                                 {isLoading ? <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" /> : "S'inscrire"}
                             </button>
