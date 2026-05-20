@@ -17,6 +17,14 @@ function getMailErrorMessage(error: unknown) {
     return "Erreur SMTP inconnue.";
 }
 
+function formatBrevoError(message: string) {
+    if (message.toLowerCase().includes("unrecognised ip address")) {
+        return "Brevo bloque l'IP du serveur. Ajoutez l'IP sortante du service dans Security > Authorized IPs sur Brevo.";
+    }
+
+    return `Brevo: ${message}`;
+}
+
 function getSender(defaultEmail?: string): Sender {
     const from = process.env.SMTP_FROM?.trim();
     const match = from?.match(/^(?:"?([^"<]+)"?\s*)?<([^<>@\s]+@[^<>@\s]+)>$/);
@@ -97,7 +105,7 @@ async function sendWithBrevoApi(email: string, subject: string, html: string, se
         if (!response.ok) {
             const message = data?.message || data?.code || `HTTP ${response.status}`;
             console.error("Erreur Brevo lors de l'envoi de l'email:", data || message);
-            return { success: false, error: `Brevo: ${message}` };
+            return { success: false, error: formatBrevoError(message) };
         }
 
         console.log(`Email de vérification envoyé à ${email} via Brevo API`);
