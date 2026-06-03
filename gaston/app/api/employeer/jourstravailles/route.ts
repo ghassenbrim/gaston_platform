@@ -1,12 +1,11 @@
 import { getEmployeeWorkDays } from "@/backend/employee/jourstravailles";
-import { cookies } from "next/headers";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 export async function GET() {
-  const userId = (await cookies()).get("userId")?.value;
-  if (!userId) {
-    return Response.json({ success: false, error: "Non authentifié." }, { status: 401 });
-  }
+  const employee = await requireRole(Role.EMPLOYEE);
+  if (!employee) return unauthorized("Non authentifie.");
 
-  const workDays = await getEmployeeWorkDays(userId);
+  const workDays = await getEmployeeWorkDays(employee.id);
   return Response.json({ success: true, data: workDays });
 }

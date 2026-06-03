@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
+import { requireRole } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 export async function POST(req: Request) {
     try {
-        const cookieStore = await cookies();
-        const userId = cookieStore.get("userId")?.value;
-
-        if (!userId) {
+        const user = await requireRole(Role.USER);
+        if (!user) {
             return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
         }
 
@@ -20,7 +19,7 @@ export async function POST(req: Request) {
 
         const review = await prisma.review.create({
             data: {
-                userId: userId,
+                userId: user.id,
                 quote,
                 rating: Number(rating),
                 eventRole,
@@ -37,15 +36,13 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
     try {
-        const cookieStore = await cookies();
-        const userId = cookieStore.get("userId")?.value;
-
-        if (!userId) {
+        const user = await requireRole(Role.USER);
+        if (!user) {
             return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
         }
 
         const reviews = await prisma.review.findMany({
-            where: { userId: userId },
+            where: { userId: user.id },
             orderBy: { createdAt: "desc" },
         });
 

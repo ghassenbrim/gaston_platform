@@ -3,8 +3,7 @@
 
 // Importation de la fonction de connexion depuis le backend d'authentification
 import { signIn } from "@/backend/auth";
-// Importation de l'utilitaire Next.js pour lire et écrire les cookies HTTP
-import { cookies } from "next/headers";
+import { setSessionCookies } from "@/lib/auth";
 
 /**
  * Table de correspondance entre les rôles utilisateurs et leurs URLs de tableau de bord.
@@ -38,20 +37,12 @@ export async function loginAction(formData: FormData) {
     const result = await signIn(email, password);
 
     if (result.success && result.user) {
-        // Accès au store de cookies HTTP (côté serveur)
-        const cookieStore = await cookies();
         const userRole = result.user.role as string;
 
-        console.log(`[loginAction] Connexion réussie: ${email} avec rôle ${userRole}`);
-
-        // Enregistrement de l'identifiant utilisateur dans un cookie sécurisé (7 jours)
-        cookieStore.set("userId",   result.user.id,   { path: "/", maxAge: 86400 * 7, httpOnly: true, secure: true, sameSite: "lax" });
-        // Enregistrement du rôle dans un cookie sécurisé pour les vérifications d'accès
-        cookieStore.set("userRole", userRole, { path: "/", maxAge: 86400 * 7, httpOnly: true, secure: true, sameSite: "lax" });
+        await setSessionCookies({ id: result.user.id, role: userRole });
 
         // Détermination de l'URL du tableau de bord selon le rôle (fallback sur USER)
         const dashboardUrl = dashboardMap[userRole] || "/role/user/dashboard";
-        console.log(`[loginAction] Redirection vers ${dashboardUrl}`);
 
         // Retourner toutes les informations de session nécessaires au client
         return {
@@ -65,6 +56,5 @@ export async function loginAction(formData: FormData) {
     }
 
     // En cas d'échec, retourner le message d'erreur provenant du backend
-    console.error(`[loginAction] Erreur de connexion pour ${email}:`, (result as { error?: string }).error);
     return { success: false, error: (result as { error?: string }).error ?? "Email ou mot de passe incorrect." };
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 /**
  * Récupère le profil complet d'un utilisateur depuis la base de données.
@@ -36,8 +37,6 @@ export const getUserProfile = async (userId: string) => {
 
 /**
  * Met à jour le mot de passe d'un utilisateur après vérification de l'ancien mot de passe.
- * Note : la comparaison est faite en clair (pas de hashage pour l'instant).
- *
  * @param userId - L'identifiant de l'utilisateur.
  * @param data   - Objet contenant l'ancien mot de passe (currentPassword) et le nouveau (newPassword).
  * @returns { success: true } si la mise à jour réussit, ou { success: false, error } sinon.
@@ -54,14 +53,14 @@ export const updateUserPassword = async (
         });
 
         // Vérification que l'utilisateur existe et que l'ancien mot de passe correspond
-        if (!user || user.password !== data.currentPassword) {
+        if (!user || !(await verifyPassword(data.currentPassword, user.password))) {
             return { success: false, error: "Mot de passe actuel incorrect." };
         }
 
-        // Mise à jour avec le nouveau mot de passe
+        // Mise à jour avec le nouveau mot de passe hache
         await prisma.user.update({
             where: { id: userId },
-            data: { password: data.newPassword },
+            data: { password: await hashPassword(data.newPassword) },
         });
 
         return { success: true };

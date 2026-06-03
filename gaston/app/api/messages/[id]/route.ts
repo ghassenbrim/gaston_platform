@@ -1,17 +1,17 @@
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, unauthorized } from "@/lib/auth";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
     const { id } = await context.params;
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false, error: "Non authentifié" }, { status: 401 });
+    const user = await requireAuth();
+    if (!user) return unauthorized("Non authentifie.");
 
     const body = await request.json();
     
     // Vérification droits
     const message = await prisma.message.findUnique({ where: { id } });
     if (!message) return Response.json({ success: false, error: "Introuvable" }, { status: 404 });
-    if (message.senderId !== userId && message.receiverId !== userId) {
+    if (message.senderId !== user.id && message.receiverId !== user.id) {
         return Response.json({ success: false, error: "Non autorisé" }, { status: 403 });
     }
 
@@ -33,16 +33,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
     const { id } = await context.params;
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false, error: "Non authentifié" }, { status: 401 });
+    const user = await requireAuth();
+    if (!user) return unauthorized("Non authentifie.");
 
     const message = await prisma.message.findUnique({ where: { id } });
     if (!message) return Response.json({ success: false, error: "Introuvable" }, { status: 404 });
     
-    const userRole = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-    
     // Seul l'expéditeur ou l'ADMIN peut supprimer
-    if (message.senderId !== userId && userRole?.role !== "ADMIN") {
+    if (message.senderId !== user.id && user.role !== "ADMIN") {
         return Response.json({ success: false, error: "Non autorisé à supprimer" }, { status: 403 });
     }
 

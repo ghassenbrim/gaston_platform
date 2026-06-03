@@ -3,20 +3,17 @@
 
 import { createRendezVous, getUserRendezVous } from "@/backend/user/rendezvous";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/user/rendezvous — Récupère la liste des rendez-vous de l'utilisateur connecté
 export async function GET() {
-  // Récupère l'identifiant de l'utilisateur depuis le cookie de session
-  const userId = (await cookies()).get("userId")?.value;
-  if (!userId) {
-    // Retourne une erreur 401 si l'utilisateur n'est pas authentifié
-    return Response.json({ success: false, error: "Non authentifie." }, { status: 401 });
-  }
+  const currentUser = await requireRole(Role.USER);
+  if (!currentUser) return unauthorized("Non authentifie.");
 
   // Recherche l'utilisateur en base de données pour obtenir son email
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { id: currentUser.id },
     select: { email: true },
   });
 
@@ -32,15 +29,12 @@ export async function GET() {
 
 // POST /api/user/rendezvous — Crée un nouveau rendez-vous pour l'utilisateur connecté
 export async function POST(request: Request) {
-  // Récupère l'identifiant de l'utilisateur depuis le cookie de session
-  const userId = (await cookies()).get("userId")?.value;
-  if (!userId) {
-    return Response.json({ success: false, error: "Non authentifie." }, { status: 401 });
-  }
+  const currentUser = await requireRole(Role.USER);
+  if (!currentUser) return unauthorized("Non authentifie.");
 
   // Récupère le nom et l'email de l'utilisateur pour pré-remplir le rendez-vous
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { id: currentUser.id },
     select: { name: true, email: true },
   });
 

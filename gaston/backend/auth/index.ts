@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 // Importation des utilitaires d'envoi d'email et de SMS de vérification
 import { sendVerificationEmail } from "@/lib/mail";
 import { sendVerificationSMS } from "@/lib/sms";
+import { hashPassword, isPasswordHashed, verifyPassword } from "@/lib/password";
 
 /**
  * Génère un code de vérification aléatoire à 6 chiffres.
@@ -163,34 +164,36 @@ export const verifyCode = async (email: string, code: string) => {
  * Gère la connexion d'un utilisateur.
  * Vérifie l'email et le mot de passe, puis retourne les informations
  * de l'utilisateur avec son rôle normalisé en majuscules.
- * Note: En production, hachez les mots de passe.
  */
 export const signIn = async (email: string, password: string) => {
     try {
+        const normalizedEmail = email.trim().toLowerCase();
         // Recherche de l'utilisateur par email, en incluant son éventuel profil Employé
         const user = await prisma.user.findUnique({
-            where: { email },
+            where: { email: normalizedEmail },
             include: { Employee: true }
         });
 
-        console.log(`[signIn] Recherche utilisateur: ${email}`);
-        console.log(`[signIn] Utilisateur trouvé:`, user ? { id: user.id, role: user.role, employeeExists: !!user.Employee } : "NOT_FOUND");
-
         // Si aucun utilisateur ne correspond à cet email
         if (!user) {
-            console.warn(`[signIn] Email non trouvé: ${email}`);
             return { success: false, error: "Email ou mot de passe incorrect" };
         }
 
-        // Vérification du mot de passe (comparaison en clair — à remplacer par bcrypt en production)
-        if (user.password !== password) {
-            console.warn(`[signIn] Mot de passe incorrect pour ${email}`);
+        const passwordOk = await verifyPassword(password, user.password);
+        if (!passwordOk) {
             return { success: false, error: "Email ou mot de passe incorrect" };
+        }
+
+        // Migration progressive des anciens mots de passe en clair.
+        if (!isPasswordHashed(user.password)) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { password: await hashPassword(password) },
+            });
         }
 
         // Normalisation du rôle en majuscules pour garantir la cohérence (ex: "admin" → "ADMIN")
         const roleValue = String(user.role).toUpperCase();
-        console.log(`[signIn] Connexion réussie pour ${email}. Role type: ${typeof user.role}, Value: "${user.role}", Normalized: "${roleValue}"`);
 
         // Retourner les données essentielles de l'utilisateur (sans le mot de passe)
         return {
@@ -203,7 +206,7 @@ export const signIn = async (email: string, password: string) => {
             }
         };
     } catch (error) {
-        console.error(`Erreur lors de la connexion pour ${email}:`, error);
+        console.error("Erreur lors de la connexion:", error);
         return { success: false, error: "Une erreur est survenue lors de la connexion." };
     }
 };
@@ -222,9 +225,10 @@ export const signUp = async (data: {
     gender?: string;
 }) => {
     try {
+        const normalizedEmail = data.email.trim().toLowerCase();
         // Vérifier si un compte existe déjà avec cet email
         const existingUser = await prisma.user.findUnique({
-            where: { email: data.email }
+            where: { email: normalizedEmail }
         });
 
         // Empêcher la création d'un doublon
@@ -236,8 +240,8 @@ export const signUp = async (data: {
         const user = await prisma.user.create({
             data: {
                 name: data.name,
-                email: data.email,
-                password: data.password, // À hacher en production avec bcrypt
+                email: normalizedEmail,
+                password: data.password ? await hashPassword(data.password) : null,
                 phone: data.phone,
                 age: data.age,
                 gender: data.gender,

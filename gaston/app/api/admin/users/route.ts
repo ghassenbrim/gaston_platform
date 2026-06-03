@@ -1,13 +1,11 @@
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/admin/users?search=xxx → chercher utilisateurs et employés
 export async function GET(request: Request) {
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false, error: "Non autorisé." }, { status: 401 });
-
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-    if (user?.role !== "ADMIN") return Response.json({ success: false, error: "Non autorisé." }, { status: 401 });
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim() || "";

@@ -1,19 +1,18 @@
 // Route API pour récupérer les contrats de l'utilisateur connecté.
 // Expose une méthode GET qui retourne la liste des contrats triés du plus récent au plus ancien.
 
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/user/contracts — Retourne tous les contrats liés à l'utilisateur connecté
 export async function GET() {
-    // Lit le cookie de session pour identifier l'utilisateur
-    const store = await cookies();
-    const userId = store.get("userId")?.value;
-    if (!userId) return Response.json({ error: "Non authentifié." }, { status: 401 });
+    const user = await requireRole(Role.USER);
+    if (!user) return unauthorized("Non authentifie.");
 
     // Récupère tous les contrats de l'utilisateur, triés du plus récent au plus ancien
     const contracts = await prisma.contract.findMany({
-        where: { userId },
+        where: { userId: user.id },
         orderBy: { createdAt: "desc" },
     });
 

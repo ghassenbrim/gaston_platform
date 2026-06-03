@@ -67,10 +67,10 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
  * @param notificationId - L'identifiant de la notification à marquer comme lue.
  * @returns { success: true } ou { success: false } selon le résultat.
  */
-export const markAsRead = async (notificationId: string) => {
+export const markAsRead = async (notificationId: string, userId: string) => {
     try {
-        await prisma.notification.update({
-            where: { id: notificationId },
+        await prisma.notification.updateMany({
+            where: { id: notificationId, userId },
             data: { isRead: true },
         });
         return { success: true };

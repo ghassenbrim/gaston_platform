@@ -3,9 +3,14 @@
 
 import { getEmployees } from "@/backend/admin/employes";
 import { createEmployee } from "@/backend/admin/employes";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/admin/employes — Retourne la liste de tous les employés de la plateforme
 export async function GET() {
+  const admin = await requireRole(Role.ADMIN);
+  if (!admin) return unauthorized();
+
   const employees = await getEmployees();
   return Response.json(employees);
 }
@@ -13,6 +18,9 @@ export async function GET() {
 // POST /api/admin/employes — Crée un nouvel employé avec les informations fournies
 export async function POST(request: Request) {
   try {
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
+
     // Lit le corps de la requête contenant les informations du nouvel employé
     const body = await request.json();
 

@@ -1,27 +1,16 @@
 // Route API pour la messagerie côté administrateur.
 // Permet à l'admin de consulter les conversations et d'envoyer des messages aux utilisateurs.
 
-import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
 import { getAdminConversations, getConversation, sendAdminMessage } from "@/backend/admin/messages";
-
-// Fonction utilitaire : vérifie que l'utilisateur connecté est bien un administrateur
-// Retourne l'userId si le rôle est ADMIN, sinon null
-async function getAdminId() {
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return null;
-    // Charge uniquement le champ "role" pour minimiser la requête
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-    if (user?.role !== "ADMIN") return null;
-    return userId;
-}
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/admin/messages          → Retourne la liste de toutes les conversations de l'admin
 // GET /api/admin/messages?userId=x → Retourne les messages d'une conversation spécifique avec un utilisateur
 export async function GET(request: Request) {
     // Vérifie que l'appelant est bien un administrateur
-    const adminId = await getAdminId();
-    if (!adminId) return Response.json({ success: false, error: "Non autorisé." }, { status: 401 });
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
 
     // Lit le paramètre "userId" dans l'URL pour savoir si on veut une conversation précise
     const { searchParams } = new URL(request.url);
@@ -29,20 +18,20 @@ export async function GET(request: Request) {
 
     if (userId) {
         // Si un userId est fourni, on retourne les messages de cette conversation uniquement
-        const messages = await getConversation(adminId, userId);
+        const messages = await getConversation(admin.id, userId);
         return Response.json({ success: true, data: messages });
     }
 
     // Sinon, on retourne la liste de toutes les conversations de l'admin
-    const conversations = await getAdminConversations(adminId);
+    const conversations = await getAdminConversations(admin.id);
     return Response.json({ success: true, data: conversations });
 }
 
 // POST /api/admin/messages → Envoie un message de l'admin vers un utilisateur
 export async function POST(request: Request) {
     // Vérifie que l'appelant est bien un administrateur
-    const adminId = await getAdminId();
-    if (!adminId) return Response.json({ success: false, error: "Non autorisé." }, { status: 401 });
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
 
     // Extrait les champs du corps de la requête :
     // receiverId = destinataire, content = texte, mediaUrl/mediaType/fileName = pièce jointe,
@@ -58,6 +47,6 @@ export async function POST(request: Request) {
     const media = mediaUrl ? { mediaUrl, mediaType, fileName } : undefined;
 
     // Envoie le message via la couche backend
-    const result = await sendAdminMessage(adminId, receiverId, content?.trim() ?? "", media, replyToId);
+    const result = await sendAdminMessage(admin.id, receiverId, content?.trim() ?? "", media, replyToId);
     return Response.json(result);
 }

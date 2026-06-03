@@ -1,7 +1,4 @@
-// Importation de l'utilitaire Next.js pour lire les cookies HTTP
-import { cookies } from "next/headers";
-// Importation du client Prisma pour accéder à la base de données
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 /**
  * Route API : GET /api/me
@@ -15,24 +12,7 @@ import { prisma } from "@/lib/prisma";
  * Réponse si connecté     : { loggedIn: true, id, name, email, role, dashboard }
  */
 export async function GET() {
-    // Lecture des cookies de session depuis la requête HTTP
-    const cookieStore = await cookies();
-    const userId   = cookieStore.get("userId")?.value;
-    const userRole = cookieStore.get("userRole")?.value;
-
-    // Si l'un des cookies de session est absent, l'utilisateur n'est pas connecté
-    if (!userId || !userRole) {
-        return Response.json({ loggedIn: false });
-    }
-
-    // Récupération des informations de l'utilisateur en base de données
-    // (ne charge que les champs nécessaires pour limiter les données exposées)
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, name: true, email: true, role: true },
-    });
-
-    // Si l'utilisateur a été supprimé de la base alors que son cookie existe encore
+    const user = await getCurrentUser();
     if (!user) {
         return Response.json({ loggedIn: false });
     }

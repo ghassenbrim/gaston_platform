@@ -5,6 +5,7 @@
 import { signUp, sendVerificationCode, verifyCode } from "@/backend/auth";
 // Importation de l'utilitaire Next.js pour manipuler les cookies HTTP
 import { cookies } from "next/headers";
+import { setSessionCookies } from "@/lib/auth";
 
 /**
  * Action serveur : envoie un code de vérification par email.
@@ -45,6 +46,7 @@ export async function verifyCodeAction(email: string, code: string) {
             path: "/",
             maxAge: 15 * 60,       // 15 minutes (en secondes)
             httpOnly: true,        // Non accessible en JavaScript côté client
+            secure: process.env.NODE_ENV === "production",
             sameSite: "strict",    // Protection contre les requêtes cross-site
         });
     }
@@ -90,8 +92,7 @@ export async function signUpAction(formData: FormData) {
     });
 
     if (result.success && result.user) {
-        // Création réussie : on pose le cookie de session (userId) pour 7 jours
-        cookieStore.set("userId", result.user.id, { path: "/", maxAge: 86400 * 7 });
+        await setSessionCookies({ id: result.user.id, role: result.user.role });
         // Suppression du cookie temporaire de vérification d'email (il n'est plus nécessaire)
         cookieStore.delete("verified_email");
     }

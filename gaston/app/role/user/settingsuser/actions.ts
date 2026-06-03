@@ -5,7 +5,8 @@
 // depuis les composants client pour interagir avec la base de données.
 
 import { getUserProfile, updateUserProfile, updateUserPassword } from "@/backend/user/settings";
-import { cookies } from "next/headers";
+import { requireRole } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 /**
  * Récupère le profil complet de l'utilisateur actuellement connecté.
@@ -13,10 +14,9 @@ import { cookies } from "next/headers";
  * Retourne une erreur si l'utilisateur n'est pas authentifié.
  */
 export async function fetchUserProfileAction() {
-    // Lecture de l'ID utilisateur stocké dans le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return { success: false, error: "Non authentifié. Veuillez vous connecter." };
-    return await getUserProfile(userId);
+    const user = await requireRole(Role.USER);
+    if (!user) return { success: false, error: "Non authentifié. Veuillez vous connecter." };
+    return await getUserProfile(user.id);
 }
 
 /**
@@ -25,9 +25,8 @@ export async function fetchUserProfileAction() {
  * Retourne une erreur si l'utilisateur n'est pas authentifié.
  */
 export async function updateUserProfileAction(formData: FormData) {
-    // Vérification de l'authentification via le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return { success: false, error: "Non authentifié. Veuillez vous connecter." };
+    const user = await requireRole(Role.USER);
+    if (!user) return { success: false, error: "Non authentifié. Veuillez vous connecter." };
 
     // Extraction des champs du formulaire
     const data = {
@@ -38,7 +37,7 @@ export async function updateUserProfileAction(formData: FormData) {
         gender: formData.get("gender") as string,
     };
 
-    return await updateUserProfile(userId, data);
+    return await updateUserProfile(user.id, data);
 }
 
 /**
@@ -47,8 +46,7 @@ export async function updateUserProfileAction(formData: FormData) {
  * Retourne une erreur si l'utilisateur n'est pas authentifié.
  */
 export async function updateUserPasswordAction(data: { currentPassword: string; newPassword: string }) {
-    // Vérification de l'authentification via le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return { success: false, error: "Non authentifié. Veuillez vous connecter." };
-    return await updateUserPassword(userId, data);
+    const user = await requireRole(Role.USER);
+    if (!user) return { success: false, error: "Non authentifié. Veuillez vous connecter." };
+    return await updateUserPassword(user.id, data);
 }

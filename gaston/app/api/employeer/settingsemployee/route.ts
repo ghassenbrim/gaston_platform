@@ -1,19 +1,20 @@
 import { getEmployeeProfile, updateEmployeeProfile, updateEmployeePassword } from "@/backend/employee/settingsemployee";
-import { cookies } from "next/headers";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 export async function GET() {
-  const userId = (await cookies()).get("userId")?.value;
-  if (!userId) return Response.json({ success: false, error: "Non authentifié." }, { status: 401 });
+  const employee = await requireRole(Role.EMPLOYEE);
+  if (!employee) return unauthorized("Non authentifie.");
 
-  const profile = await getEmployeeProfile(userId);
+  const profile = await getEmployeeProfile(employee.id);
   if (!profile) return Response.json({ success: false, error: "Profil non trouvé." }, { status: 404 });
 
   return Response.json({ success: true, data: profile });
 }
 
 export async function PATCH(request: Request) {
-  const userId = (await cookies()).get("userId")?.value;
-  if (!userId) return Response.json({ success: false, error: "Non authentifié." }, { status: 401 });
+  const employee = await requireRole(Role.EMPLOYEE);
+  if (!employee) return unauthorized("Non authentifie.");
 
   const body = await request.json();
 
@@ -21,14 +22,14 @@ export async function PATCH(request: Request) {
     if (!body.currentPassword || !body.newPassword) {
       return Response.json({ success: false, error: "Champs manquants." }, { status: 400 });
     }
-    const result = await updateEmployeePassword(userId, {
+    const result = await updateEmployeePassword(employee.id, {
       currentPassword: body.currentPassword,
       newPassword: body.newPassword,
     });
     return Response.json(result, { status: result.success ? 200 : 400 });
   }
 
-  const result = await updateEmployeeProfile(userId, {
+  const result = await updateEmployeeProfile(employee.id, {
     firstName: body.firstName,
     lastName: body.lastName,
     position: body.position,

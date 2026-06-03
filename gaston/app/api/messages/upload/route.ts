@@ -1,16 +1,15 @@
 // Route API pour l'upload de fichiers dans le contexte de la messagerie.
 // Accepte les images, fichiers audio et fichiers génériques jusqu'à 25 Mo.
 
-import { cookies } from "next/headers";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { ensureUploadDir, getUploadUrl } from "@/lib/uploads";
+import { requireAuth, unauthorized } from "@/lib/auth";
 
 // POST /api/messages/upload — Reçoit un fichier joint à un message et le sauvegarde sur le serveur
 export async function POST(request: Request) {
-    // Vérifie que l'utilisateur est authentifié via le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false, error: "Non authentifié." }, { status: 401 });
+    const user = await requireAuth();
+    if (!user) return unauthorized("Non authentifie.");
 
     // Lit les données du formulaire multipart (le fichier est attendu sous la clé "file")
     const formData = await request.formData();

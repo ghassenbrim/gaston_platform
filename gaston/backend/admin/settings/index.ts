@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 /**
  * Récupère le profil complet de l'administrateur connecté.
@@ -58,13 +59,13 @@ export const updateAdminPassword = async (
             select: { password: true },
         });
 
-        if (!user || user.password !== data.currentPassword) {
+        if (!user || !(await verifyPassword(data.currentPassword, user.password))) {
             return { success: false, error: "Mot de passe actuel incorrect." };
         }
 
         await prisma.user.update({
             where: { id: userId },
-            data: { password: data.newPassword },
+            data: { password: await hashPassword(data.newPassword) },
         });
 
         return { success: true };

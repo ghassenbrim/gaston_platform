@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Role, WorkStatus } from "@prisma/client";
+import { hashPassword } from "@/lib/password";
 
 /**
  * Récupère la liste complète des employés avec leurs informations de base.
@@ -74,9 +75,10 @@ export const createEmployee = async (data: {
     role: string; // Correspond au poste occupé (ex: "Photographe", "Assistant")
 }) => {
     try {
+        const normalizedEmail = data.email.trim().toLowerCase();
         // Vérification de l'unicité de l'email avant toute création
         const existingUser = await prisma.user.findUnique({
-            where: { email: data.email }
+            where: { email: normalizedEmail }
         });
 
         if (existingUser) {
@@ -88,10 +90,10 @@ export const createEmployee = async (data: {
             // Étape 1 : Création du compte utilisateur avec le rôle EMPLOYEE
             const user = await tx.user.create({
                 data: {
-                    email: data.email,
+                    email: normalizedEmail,
                     name: `${data.prenom} ${data.nom}`,
                     phone: data.phone,
-                    password: data.password,
+                    password: await hashPassword(data.password),
                     role: Role.EMPLOYEE,
                 }
             });

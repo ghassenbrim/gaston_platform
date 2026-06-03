@@ -2,18 +2,15 @@
 // Expose une méthode GET qui retourne les événements planifiés pour cet employé.
 
 import { getEmployeePlanning } from "@/backend/employee/planning";
-import { cookies } from "next/headers";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/employeer/planning — Retourne le planning de l'employé connecté
 export async function GET() {
-  // Récupère l'identifiant de l'employé depuis le cookie de session
-  const userId = (await cookies()).get("userId")?.value;
-  if (!userId) {
-    // Retourne une erreur 401 si l'employé n'est pas authentifié
-    return Response.json({ success: false, error: "Non authentifie." }, { status: 401 });
-  }
+  const employee = await requireRole(Role.EMPLOYEE);
+  if (!employee) return unauthorized("Non authentifie.");
 
   // Charge le planning via la couche backend et le retourne
-  const planning = await getEmployeePlanning(userId);
+  const planning = await getEmployeePlanning(employee.id);
   return Response.json({ success: true, data: planning });
 }

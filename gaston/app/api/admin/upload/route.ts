@@ -5,6 +5,8 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 import { NextRequest } from "next/server";
 import { ensureUploadDir, getUploadUrl } from "@/lib/uploads";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 function getExtension(filename: string) {
   return filename.split(".").pop()?.toLowerCase() ?? "";
@@ -35,6 +37,9 @@ function isVideoUpload(file: File) {
 // POST /api/admin/upload — Reçoit un fichier et le sauvegarde dans le dossier public/uploads
 export async function POST(req: NextRequest) {
   try {
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
+
     // Lit les données du formulaire multipart
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

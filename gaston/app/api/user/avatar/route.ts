@@ -1,17 +1,16 @@
 // Route API pour la gestion de l'avatar (photo de profil) de l'utilisateur connecté.
 // Expose deux méthodes : POST (uploader un nouvel avatar) et DELETE (supprimer l'avatar).
 
-import { cookies } from "next/headers";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { prisma } from "@/lib/prisma";
 import { ensureUploadDir, getUploadUrl } from "@/lib/uploads";
+import { requireAuth, unauthorized } from "@/lib/auth";
 
 // POST /api/user/avatar — Reçoit un fichier image et le sauvegarde comme avatar de l'utilisateur
 export async function POST(request: Request) {
-    // Vérifie que l'utilisateur est authentifié via le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false, error: "Non authentifié." }, { status: 401 });
+    const user = await requireAuth();
+    if (!user) return unauthorized("Non authentifie.");
 
     // Lit les données du formulaire multipart (le fichier image est attendu sous la clé "file")
     const formData = await request.formData();
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
 
     // Génère un nom de fichier unique basé sur l'userId et le timestamp courant
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const filename = `avatar_${userId}_${Date.now()}.${ext}`;
+    const filename = `avatar_${user.id}_${Date.now()}.${ext}`;
 
     // Détermine le dossier de destination et le crée si nécessaire
     const uploadDir = await ensureUploadDir("avatars");
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
 
     // Construit l'URL publique de l'avatar et met à jour la base de données
     const avatarUrl = getUploadUrl(filename, "avatars");
-    await prisma.user.update({ where: { id: userId }, data: { avatar: avatarUrl } });
+    await prisma.user.update({ where: { id: user.id }, data: { avatar: avatarUrl } });
 
     // Retourne l'URL du nouvel avatar pour que le client puisse l'afficher immédiatement
     return Response.json({ success: true, avatarUrl });
@@ -47,11 +46,10 @@ export async function POST(request: Request) {
 
 // DELETE /api/user/avatar — Supprime l'avatar de l'utilisateur (remet le champ à null)
 export async function DELETE() {
-    // Vérifie que l'utilisateur est authentifié via le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false, error: "Non authentifié." }, { status: 401 });
+    const user = await requireAuth();
+    if (!user) return unauthorized("Non authentifie.");
 
     // Remet le champ avatar à null en base de données (le fichier physique n'est pas supprimé)
-    await prisma.user.update({ where: { id: userId }, data: { avatar: null } });
+    await prisma.user.update({ where: { id: user.id }, data: { avatar: null } });
     return Response.json({ success: true });
 }

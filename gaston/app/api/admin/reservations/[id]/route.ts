@@ -1,10 +1,15 @@
 import { deleteReservation, updateReservationStatus } from "@/backend/admin/reservations";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 type Context = {
   params: Promise<{ id: string }>;
 };
 
 export async function PATCH(request: Request, context: Context) {
+  const admin = await requireRole(Role.ADMIN);
+  if (!admin) return unauthorized();
+
   const { id } = await context.params;
   const body = await request.json();
   const result = await updateReservationStatus(id, body.status, body.employeeIds, body.contractUrl);
@@ -20,6 +25,9 @@ export async function PATCH(request: Request, context: Context) {
 }
 
 export async function DELETE(_request: Request, context: Context) {
+  const admin = await requireRole(Role.ADMIN);
+  if (!admin) return unauthorized();
+
   const { id } = await context.params;
   const result = await deleteReservation(id);
 

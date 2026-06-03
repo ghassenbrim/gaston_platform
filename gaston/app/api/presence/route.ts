@@ -2,8 +2,7 @@
 // Utilise un stockage en mémoire partagé (variable globale) pour persister les données entre les requêtes Next.js.
 // Expose deux méthodes : POST (heartbeat du client) et GET (liste des utilisateurs en ligne).
 
-import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { requireAuth, unauthorized } from "@/lib/auth";
 
 // ─── Stockage en mémoire de la présence ───────────────────────────────────────
 // Map<userId, lastSeenTimestamp> — associe chaque userId au timestamp de son dernier heartbeat
@@ -17,12 +16,11 @@ const ONLINE_THRESHOLD_MS = 60_000; // 60 secondes
 
 // ─── POST /api/presence — Heartbeat envoyé par le client pour signaler sa présence ────────────────────────
 export async function POST() {
-    // Récupère l'identifiant de l'utilisateur depuis le cookie de session
-    const userId = (await cookies()).get("userId")?.value;
-    if (!userId) return Response.json({ success: false }, { status: 401 });
+    const user = await requireAuth();
+    if (!user) return unauthorized("Non authentifie.");
 
     // Met à jour le timestamp de dernière activité pour cet utilisateur
-    presenceMap.set(userId, Date.now());
+    presenceMap.set(user.id, Date.now());
     return Response.json({ success: true });
 }
 

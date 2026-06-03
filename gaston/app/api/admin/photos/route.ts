@@ -1,7 +1,12 @@
 import { getUserPhotos, addPhotoToUser, deletePhoto } from "@/backend/admin/photos";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET  /api/admin/photos?userId=xxx
 export async function GET(request: Request) {
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
     if (!userId) return Response.json({ error: "userId manquant." }, { status: 400 });
@@ -11,6 +16,9 @@ export async function GET(request: Request) {
 
 // POST /api/admin/photos  { userId, url, category, mediaType, aspectRatio }
 export async function POST(request: Request) {
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
+
     const { userId, url, category, mediaType, aspectRatio } = await request.json();
     if (!userId || !url) return Response.json({ success: false, error: "Champs manquants." }, { status: 400 });
     const result = await addPhotoToUser(userId, url, category || "Général", mediaType === "video" ? "video" : "image", aspectRatio);
@@ -19,6 +27,9 @@ export async function POST(request: Request) {
 
 // DELETE /api/admin/photos  { photoId }
 export async function DELETE(request: Request) {
+    const admin = await requireRole(Role.ADMIN);
+    if (!admin) return unauthorized();
+
     const { photoId } = await request.json();
     if (!photoId) return Response.json({ success: false, error: "photoId manquant." }, { status: 400 });
     const result = await deletePhoto(photoId);

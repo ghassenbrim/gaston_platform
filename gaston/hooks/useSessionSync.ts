@@ -4,48 +4,21 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Synchronise les cookies serveur avec la session de cet onglet (sessionStorage).
- * Quand l'onglet devient actif, restaure les cookies du bon utilisateur.
+ * Verifie que la session signee par le serveur correspond au role attendu.
  */
 export function useSessionSync(expectedRole: string) {
     const router = useRouter();
 
     useEffect(() => {
         const restoreSession = async () => {
-            const stored = sessionStorage.getItem("gaston_tab_session");
-            if (!stored) {
-                console.warn(`[useSessionSync] Pas de session trouvée pour ${expectedRole}`);
-                return;
-            }
-
-            let session: { userId: string; role: string } | null = null;
-            try { session = JSON.parse(stored); } catch (e) {
-                console.error("[useSessionSync] Erreur parsing session:", e);
-                return;
-            }
-
-            if (!session?.userId) {
-                console.warn("[useSessionSync] Pas d'userId dans la session");
-                return;
-            }
-
-            if (session.role !== expectedRole) {
-                console.warn(`[useSessionSync] Role mismatch: expected ${expectedRole}, got ${session.role}. Redirection requise.`);
-                router.push("/role/welcompage/signe_in");
-                return;
-            }
-
             try {
-                const res = await fetch("/api/auth/restore", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId: session.userId }),
-                });
+                const res = await fetch("/api/me", { cache: "no-store" });
                 const data = await res.json();
-                if (data.success) {
-                    // Rafraîchit les server components avec les nouveaux cookies
+                if (data.loggedIn && data.role === expectedRole) {
                     router.refresh();
+                    return;
                 }
+                router.push("/role/welcompage/signe_in");
             } catch {
                 // Silencieux
             }

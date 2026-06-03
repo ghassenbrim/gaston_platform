@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuth } from '@/lib/auth';
 
 export async function PATCH(req: Request) {
     try {
+        const user = await requireAuth();
+        if (!user) return NextResponse.json({ success: false, error: 'Non authentifie.' }, { status: 401 });
+
         const body = await req.json();
         const { unreadIds } = body;
 
@@ -12,7 +16,8 @@ export async function PATCH(req: Request) {
 
         await prisma.message.updateMany({
             where: {
-                id: { in: unreadIds }
+                id: { in: unreadIds },
+                receiverId: user.id,
             },
             data: {
                 isRead: true

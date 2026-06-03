@@ -2,10 +2,15 @@
 // Expose deux méthodes : GET (lire le contenu) et PUT (mettre à jour le contenu).
 
 import { getHomepageContent, updateHomepageContent } from "@/backend/admin/homepage";
+import { requireRole, unauthorized } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 // GET /api/admin/homepage — Retourne le contenu actuel de la page d'accueil
 // (portfolio, services, section À propos, informations de contact)
 export async function GET() {
+  const admin = await requireRole(Role.ADMIN);
+  if (!admin) return unauthorized();
+
   const data = await getHomepageContent();
   return Response.json(data);
 }
@@ -13,6 +18,9 @@ export async function GET() {
 // PUT /api/admin/homepage — Met à jour le contenu de la page d'accueil
 // Corps attendu : objet contenant les sections à mettre à jour
 export async function PUT(request: Request) {
+  const admin = await requireRole(Role.ADMIN);
+  if (!admin) return unauthorized();
+
   // Lit le corps de la requête contenant les nouvelles valeurs
   const body = await request.json();
 
